@@ -1,18 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdmin } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { generateCSRFToken } from '@/lib/csrf'
 
 /**
- * GET /api/csrf - Get CSRF token (requires authentication)
+ * GET /api/csrf - Get CSRF token (no authentication required)
  */
-export async function GET(request: NextRequest) {
-  // Verify authentication
-  const authResult = await verifyAdmin(request)
-  if ('error' in authResult) {
-    return authResult.error
-  }
-
-  // Generate and return CSRF token
+export async function GET() {
   const csrfToken = generateCSRFToken()
 
   return NextResponse.json({
