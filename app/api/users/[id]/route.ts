@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/auth'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify authentication
+  const authResult = await verifyAdmin(request)
+  if ('error' in authResult) {
+    return authResult.error
+  }
+
   try {
     const { id: userId } = await params
 

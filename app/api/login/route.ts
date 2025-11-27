@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
+import { generateToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,16 +21,8 @@ export async function POST(request: NextRequest) {
       .eq('email', email)
       .single()
 
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    if (!admin) {
-      console.error('Admin not found for email:', email)
+    if (error || !admin) {
+      // Don't reveal whether email exists or not (security best practice)
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -37,9 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    console.log('Comparing password for:', email)
     const isValidPassword = await bcrypt.compare(password, admin.password_hash)
-    console.log('Password match:', isValidPassword)
 
     if (!isValidPassword) {
       return NextResponse.json(
@@ -48,12 +39,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Return admin data (without password hash)
+    // Generate JWT token
+    const token = generateToken({
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+      level: admin.level,
+    })
+
+    // Return admin data (without password hash) and token
     const { password_hash, ...adminData } = admin
 
     return NextResponse.json({
       success: true,
       admin: adminData,
+      token,
     })
   } catch (error) {
     console.error('Login error:', error)

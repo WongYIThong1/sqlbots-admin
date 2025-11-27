@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
+  // Verify authentication
+  const authResult = await verifyAdmin(request)
+  if ('error' in authResult) {
+    return authResult.error
+  }
+
   try {
     // Get all users
     const { data: users, error: usersError } = await supabase

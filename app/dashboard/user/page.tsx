@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getAuthHeaders } from '@/lib/api-client'
 
 interface User {
   id: string
@@ -25,8 +26,15 @@ export default function UserPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch('/api/users', {
+        headers: getAuthHeaders(),
+      })
       const data = await response.json()
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
       if (data.success) {
         setUsers(data.users)
       }
@@ -50,7 +58,13 @@ export default function UserPage() {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       })
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
 
       const data = await response.json()
       if (data.success) {
@@ -84,7 +98,10 @@ export default function UserPage() {
     setDeletingIds(new Set(selectedUsers))
     try {
       const deletePromises = Array.from(selectedUsers).map((userId) =>
-        fetch(`/api/users/${userId}`, { method: 'DELETE' })
+        fetch(`/api/users/${userId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        })
       )
 
       const results = await Promise.allSettled(deletePromises)

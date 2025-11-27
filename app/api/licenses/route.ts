@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
+  // Verify authentication
+  const authResult = await verifyAdmin(request)
+  if ('error' in authResult) {
+    return authResult.error
+  }
+
   try {
     // Get all licenses
     const { data: licenses, error } = await supabase
@@ -78,6 +85,12 @@ function generateLicenseKey(planType: '30d' | '90d'): string {
 }
 
 export async function POST(request: NextRequest) {
+  // Verify authentication
+  const authResult = await verifyAdmin(request)
+  if ('error' in authResult) {
+    return authResult.error
+  }
+
   try {
     const { planType, count = 1 } = await request.json()
 
@@ -174,6 +187,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  // Verify authentication
+  const authResult = await verifyAdmin(request)
+  if ('error' in authResult) {
+    return authResult.error
+  }
+
   try {
     const { ids } = await request.json()
 

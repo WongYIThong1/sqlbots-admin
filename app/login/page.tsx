@@ -32,10 +32,17 @@ export default function LoginPage() {
         return
       }
 
-      // Store admin data in sessionStorage
-      sessionStorage.setItem('admin', JSON.stringify(data.admin))
+      // Store token and admin data in localStorage
+      if (data.token) {
+        localStorage.setItem('admin_token', data.token)
+        localStorage.setItem('admin', JSON.stringify(data.admin))
+      } else {
+        setError('Login failed: No token received')
+        setLoading(false)
+        return
+      }
       
-      // Redirect to dashboard (you can create this page later)
+      // Redirect to dashboard
       router.push('/dashboard')
     } catch (err) {
       setError('An error occurred. Please try again.')

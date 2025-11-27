@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getAuthHeaders } from '@/lib/api-client'
 
 interface License {
   id: string
@@ -35,8 +36,15 @@ export default function LicensePage() {
 
   const fetchLicenses = async () => {
     try {
-      const response = await fetch('/api/licenses')
+      const response = await fetch('/api/licenses', {
+        headers: getAuthHeaders(),
+      })
       const data = await response.json()
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
       if (data.success) {
         setLicenses(data.licenses)
       }
@@ -49,8 +57,15 @@ export default function LicensePage() {
 
   const fetchAvailablePlans = async () => {
     try {
-      const response = await fetch('/api/plans/available')
+      const response = await fetch('/api/plans/available', {
+        headers: getAuthHeaders(),
+      })
       const data = await response.json()
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
       if (data.success) {
         setAvailablePlans(data.allPlanTypes || [
           { planType: '30d', availableCount: 0 },
@@ -86,9 +101,7 @@ export default function LicensePage() {
     try {
       const response = await fetch('/api/licenses', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ 
           planType: selectedPlanType,
           count: licenseCount 
@@ -96,6 +109,12 @@ export default function LicensePage() {
       })
 
       const data = await response.json()
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
+      
       if (data.success) {
         await fetchLicenses()
         await fetchAvailablePlans()
@@ -123,7 +142,13 @@ export default function LicensePage() {
     try {
       const response = await fetch(`/api/licenses/${licenseId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       })
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
 
       const data = await response.json()
       if (data.success) {
@@ -173,11 +198,14 @@ export default function LicensePage() {
     try {
       const response = await fetch('/api/licenses', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ ids: availableSelected.map((l) => l.id) }),
       })
+      
+      if (response.status === 401) {
+        window.location.href = '/login'
+        return
+      }
 
       const data = await response.json()
       if (data.success) {
