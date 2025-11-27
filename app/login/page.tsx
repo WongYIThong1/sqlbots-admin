@@ -36,6 +36,17 @@ export default function LoginPage() {
       if (data.token) {
         localStorage.setItem('admin_token', data.token)
         localStorage.setItem('admin', JSON.stringify(data.admin))
+        
+        // Fetch CSRF token after login
+        try {
+          const csrfResponse = await fetch('/api/csrf')
+          const csrfData = await csrfResponse.json()
+          if (csrfData.csrfToken) {
+            localStorage.setItem('csrf_token', csrfData.csrfToken)
+          }
+        } catch (csrfError) {
+          console.error('Failed to fetch CSRF token:', csrfError)
+        }
       } else {
         setError('Login failed: No token received')
         setLoading(false)

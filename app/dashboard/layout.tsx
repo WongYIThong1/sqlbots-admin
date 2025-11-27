@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { getAdminData, clearAdminData, getAdminToken } from '@/lib/api-client'
+import { getAdminData, clearAdminData, getAdminToken, getCSRFToken, setCSRFToken } from '@/lib/api-client'
 
 interface Admin {
   id: string
@@ -36,6 +36,18 @@ export default function DashboardLayout({
 
     try {
       setAdmin(adminData)
+      
+      // Ensure CSRF token exists
+      if (!getCSRFToken()) {
+        fetch('/api/csrf')
+          .then(res => res.json())
+          .then(data => {
+            if (data.csrfToken) {
+              setCSRFToken(data.csrfToken)
+            }
+          })
+          .catch(console.error)
+      }
     } catch (error) {
       clearAdminData()
       router.push('/login')

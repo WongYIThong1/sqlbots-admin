@@ -71,3 +71,4 @@ export function getPasswordStrengthLabel(strength: number): string {
   return 'Strong'
 }
 
+
