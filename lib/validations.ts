@@ -60,7 +60,8 @@ export function validateRequest<T>(
     return { success: true, data: validated }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0]
+      const issues = error.issues || []
+      const firstError = issues[0]
       return {
         success: false,
         error: firstError?.message || 'Validation failed',
