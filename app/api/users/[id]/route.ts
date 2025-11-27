@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyAdmin } from '@/lib/auth'
+import { uuidSchema, validateRequest } from '@/lib/validations'
+import { csrfMiddleware } from '@/lib/csrf'
+import { logUserDeletion } from '@/lib/audit-log'
+import { getClientIP } from '@/lib/rate-limit'
 
 export async function DELETE(
   request: NextRequest,
@@ -12,12 +16,20 @@ export async function DELETE(
     return authResult.error
   }
 
+  // CSRF protection
+  const csrfCheck = csrfMiddleware(request)
+  if (csrfCheck) {
+    return csrfCheck
+  }
+
   try {
     const { id: userId } = await params
 
-    if (!userId) {
+    // Validate UUID
+    const validation = validateRequest(uuidSchema, userId)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: validation.error },
         { status: 400 }
       )
     }
@@ -62,6 +74,11 @@ export async function DELETE(
         // Don't fail the request if license release fails
       }
     }
+
+    // Log user deletion
+    const clientIP = getClientIP(request)
+    const userAgent = request.headers.get('user-agent')
+    await logUserDeletion(authResult.admin, userId, clientIP, userAgent)
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyAdmin } from '@/lib/auth'
+import { createLicenseSchema, batchDeleteSchema, validateRequest } from '@/lib/validations'
+import { csrfMiddleware } from '@/lib/csrf'
+import { logLicenseCreation, logLicenseDeletion } from '@/lib/audit-log'
+import { getClientIP } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   // Verify authentication
@@ -92,16 +96,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { planType, count = 1 } = await request.json()
+    const body = await request.json()
 
-    if (!planType || !['30d', '90d'].includes(planType)) {
+    // CSRF protection
+    const csrfCheck = csrfMiddleware(request, body)
+    if (csrfCheck) {
+      return csrfCheck
+    }
+
+    // Validate input
+    const validation = validateRequest(createLicenseSchema, body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid plan type. Must be "30d" or "90d"' },
+        { error: validation.error },
         { status: 400 }
       )
     }
 
-    const licenseCount = Math.max(1, Math.min(parseInt(count) || 1, 100)) // Limit to 1-100
+    const { planType, count: licenseCount } = validation.data
 
     // Calculate expires_at based on plan_type
     const expiresAt = new Date()
@@ -166,6 +178,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Log license creation
+    const clientIP = getClientIP(request)
+    const userAgent = request.headers.get('user-agent')
+    await logLicenseCreation(
+      authResult.admin,
+      licenseCount,
+      planType,
+      clientIP,
+      userAgent
+    )
+
     return NextResponse.json({
       success: true,
       count: licenses?.length || 0,
@@ -194,14 +217,24 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const { ids } = await request.json()
+    const body = await request.json()
 
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    // CSRF protection
+    const csrfCheck = csrfMiddleware(request, body)
+    if (csrfCheck) {
+      return csrfCheck
+    }
+
+    // Validate input
+    const validation = validateRequest(batchDeleteSchema, body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'License IDs are required' },
+        { error: validation.error },
         { status: 400 }
       )
     }
+
+    const { ids } = validation.data
 
     // Check if any of the licenses are in use
     const { data: licenses, error: fetchError } = await supabase
@@ -260,6 +293,13 @@ export async function DELETE(request: NextRequest) {
         { error: 'Failed to delete licenses' },
         { status: 500 }
       )
+    }
+
+    // Log license deletions
+    const clientIP = getClientIP(request)
+    const userAgent = request.headers.get('user-agent')
+    for (const licenseId of availableLicenseIds) {
+      await logLicenseDeletion(authResult.admin, licenseId, clientIP, userAgent)
     }
 
     return NextResponse.json({
