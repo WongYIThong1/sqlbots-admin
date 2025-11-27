@@ -27,7 +27,7 @@ export const uuidSchema = z.string().uuid('Invalid UUID format')
 // License creation validation
 export const createLicenseSchema = z.object({
   planType: z.enum(['30d', '90d'], {
-    errorMap: () => ({ message: 'Plan type must be "30d" or "90d"' }),
+    message: 'Plan type must be "30d" or "90d"',
   }),
   count: z
     .number()
